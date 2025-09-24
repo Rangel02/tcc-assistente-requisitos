@@ -1,0 +1,20 @@
+[
+  { "id": "start", "text": "Oi! Para começar, qual é o nome do projeto?", "next": "stakeholders" },
+
+  { "id": "stakeholders", "text": "Quem são os principais stakeholders?", "next": "objetivos" },
+
+  { "id": "objetivos", "text": "Quais são os 3 objetivos principais do projeto?", "next": "dados_pessoais" },
+
+  {
+    "id": "dados_pessoais",
+    "text": "O projeto envolve tratamento de dados pessoais (LGPD)? (sim/nao)",
+    "branches": { "sim": "lgpd", "nao": "restricoes" },
+    "next": "restricoes"
+  },
+
+  { "id": "lgpd", "text": "Quais dados pessoais serão tratados e qual a base legal?", "next": "restricoes" },
+
+  { "id": "restricoes", "text": "Há restrições (prazo, orçamento, compliance)?", "next": "fim" },
+
+  { "id": "fim", "text": "Obrigado! Encerramos a entrevista inicial.", "next": null }
+]
