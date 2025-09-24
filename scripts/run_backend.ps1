@@ -18,4 +18,4 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 
 # Sobe o backend (altere a porta se quiser)
-python -m uvicorn backend.app.main:app --reload --port 8000
+python -m uvicorn backend.app.main:app --reload --port 8010
