@@ -2,7 +2,6 @@
 import os
 import requests
 import streamlit as st
-
 import uuid
 
 # --- estado inicial (tem que existir antes de qualquer uso) ---
@@ -15,22 +14,41 @@ if "current_id" not in st.session_state:
 if "started" not in st.session_state:
     st.session_state.started = False
 
-
-DEFAULT_BACKEND = os.getenv("BACKEND_URL") or "http://127.0.0.1:8010"
-
-# guarda o backend url no estado para não “sumir” a cada st.rerun()
-if "backend_url" not in st.session_state:
-    st.session_state.backend_url = DEFAULT_BACKEND
-
 st.set_page_config(page_title="Assistente de Requisitos (MVP)", page_icon="🧭")
+
+# ---------- Config do backend (ENV > autodetect) ----------
+DEFAULT_BACKEND = os.getenv("BACKEND_URL")  # se vier do script/ENV, usamos
+CANDIDATES = [DEFAULT_BACKEND, "http://127.0.0.1:8010", "http://127.0.0.1:8000"]
+
+def detect_backend():
+    """Tenta /health nas URLs candidatas e retorna a primeira que responder."""
+    for url in [c for c in CANDIDATES if c]:
+        try:
+            r = requests.get(f"{url}/health", timeout=1.5)
+            if r.ok:
+                return url
+        except Exception:
+            continue
+    # fallback final
+    return "http://127.0.0.1:8000"
+
+if "backend_url" not in st.session_state:
+    st.session_state.backend_url = detect_backend()
+
+backend_url = st.session_state.backend_url
 
 # ---------- Sidebar ----------
 st.sidebar.title("Configurações")
-backend_url = st.sidebar.text_input(
-    "Backend URL",
-    value=st.session_state.backend_url,
-    key="backend_url",
-)
+st.sidebar.markdown("**Backend URL (detectado)**")
+st.sidebar.code(backend_url)
+
+if st.sidebar.button("🔁 Redetectar /health"):
+    st.session_state.backend_url = detect_backend()
+    backend_url = st.session_state.backend_url
+    st.success(f"Detectado: {backend_url}")
+
+st.sidebar.markdown("**Session ID atual**")
+st.sidebar.code(st.session_state.session_id)
 
 if st.sidebar.button("✅ Testar /health"):
     try:
@@ -39,14 +57,6 @@ if st.sidebar.button("✅ Testar /health"):
         st.sidebar.success(f"OK: {r.json()}")
     except Exception as e:
         st.sidebar.error(f"Erro: {e}")
-
-# ---------- Estado ----------
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "current_id" not in st.session_state:
-    st.session_state.current_id = None
-if "started" not in st.session_state:
-    st.session_state.started = False
 
 # ---------- Chamada à API ----------
 def call_next(answer: str | None = None):
@@ -79,13 +89,11 @@ def call_next(answer: str | None = None):
     except Exception as e:
         st.error(f"Erro ao chamar backend: {e}")
 
-
 # ---------- UI ----------
 st.title("🧭 Assistente de Requisitos — MVP")
 st.write("Chat simples para conduzir uma entrevista inicial com o PO/stakeholders.")
 
-# duas colunas; usaremos a primeira para o botão
-# duas colunas; usaremos a primeira para o botão
+# Botão de reset
 col1, col2 = st.columns(2)
 with col1:
     if st.button("🔄 Reiniciar entrevista", use_container_width=True):
@@ -102,8 +110,6 @@ with col1:
         st.session_state.current_id = None
         st.session_state.started = False
         st.rerun()
-
-
 
 # Auto-start: se ainda não começou e não temos current_id, pede a 1ª pergunta
 if not st.session_state.started and st.session_state.current_id is None:
