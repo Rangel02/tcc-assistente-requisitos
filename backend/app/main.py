@@ -4,8 +4,16 @@ from pydantic import BaseModel
 from pathlib import Path
 from typing import Dict, List
 import json
+from fastapi import Query, HTTPException
+from .db import create_db_and_tables
+from .repository import upsert_session, list_sessions, get_session_by_id
+
 
 app = FastAPI(title="Assistente de Requisitos API", version="0.2.0")
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables()
+
 
 # CORS liberado para desenvolvimento
 app.add_middleware(
@@ -79,38 +87,78 @@ def health():
 
 @app.post("/interview/next", response_model=NextResponse)
 def interview_next(req: NextRequest):
-    # garante sessão
+    # garante sessão em memória (histórico simples)
     SESSIONS.setdefault(req.session_id, [])
 
-    # se veio resposta do nó anterior, salva
-    if req.answer is not None and req.current_id in QUESTIONS:
-        qnode = QUESTIONS[req.current_id]
+    # --- normalização: tratar "null"/"none"/"" como None ---
+    cid = req.current_id
+    ans = req.answer
+    if isinstance(cid, str) and cid.strip().lower() in ("", "null", "none"):
+        cid = None
+    if isinstance(ans, str) and ans.strip().lower() in ("", "null", "none"):
+        ans = None
+
+    # se veio resposta do nó anterior, salva no histórico em memória
+    if ans is not None and cid in QUESTIONS:
+        qnode = QUESTIONS[cid]
         SESSIONS[req.session_id].append({
-            "id": req.current_id,
+            "id": cid,
             "question": qnode["text"],
-            "answer": req.answer,
+            "answer": ans,
         })
 
-    # primeira pergunta
-    if not req.current_id:
+    # primeira pergunta: se não há current_id, comece por "start"
+    if not cid:
         first = QUESTIONS.get("start")
         return NextResponse(message=first["text"], next_id="start", done=False)
 
     # nó atual
-    curr = QUESTIONS.get(req.current_id)
+    curr = QUESTIONS.get(cid)
     if not curr:
         return NextResponse(message="Passo inválido. Reinicie a entrevista.", next_id=None, done=True)
 
-    # decide próximo: branch (se existir) ou fallback 'next'
-    nxt_id = choose_next(curr, req.answer)
-    if not nxt_id:
-        return NextResponse(message="Entrevista concluída. Obrigado!", next_id=None, done=True)
+    # -------- decidir o PRÓXIMO ID --------
+    next_id = None
+    ans_norm = (ans or "").strip().lower()
 
-    nxt = QUESTIONS.get(nxt_id)
-    if not nxt:
+    # 1) Branch por resposta (se existir)
+    branch = curr.get("branch") or curr.get("branches")
+    if isinstance(branch, dict) and ans_norm:
+        next_id = branch.get(ans_norm) or branch.get("*") or branch.get("default")
+
+    # 2) Fallback 'next'
+    if not next_id:
+        next_id = curr.get("next")
+
+    # 3) Se ainda não houver próximo, encerra
+    if not next_id:
+        next_id = "fim"
+
+    # Carrega o nó seguinte (se não for o fim)
+    nxt = QUESTIONS.get(next_id) if next_id != "fim" else None
+    if next_id != "fim" and not nxt:
         return NextResponse(message="Fluxo mal configurado (próximo passo não encontrado).", next_id=None, done=True)
 
-    return NextResponse(message=nxt["text"], next_id=nxt_id, done=(nxt_id == "fim"))
+    # calcule o done e a mensagem final
+    done = (next_id == "fim")
+    message = nxt["text"] if not done else "Entrevista finalizada!"
+
+    # ====== PERSISTÊNCIA ======
+    try:
+        snapshot = {
+            "current_id": next_id,
+            "done": bool(done),
+            # "history": SESSIONS.get(req.session_id),  # opcional: salve também
+        }
+        upsert_session(session_id=req.session_id, answers_json=snapshot)
+    except Exception:
+        pass
+    # ====== FIM PERSISTÊNCIA ======
+
+    return NextResponse(message=message, next_id=next_id, done=done)
+
+
+
 
 def build_briefing_md(session_id: str) -> str:
     qa = SESSIONS.get(session_id, [])

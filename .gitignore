@@ -3,3 +3,11 @@ __pycache__/
 *.pyc
 .streamlit/
 .vscode/
+.venv/
+__pycache__/
+*.pyc
+.vscode/
+.streamlit/
+backend/data/app.db
+backend/data/*.db-wal
+backend/data/*.db-shm
