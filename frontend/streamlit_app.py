@@ -13,6 +13,11 @@ if "current_id" not in st.session_state:
     st.session_state.current_id = None
 if "started" not in st.session_state:
     st.session_state.started = False
+if "briefing_md" not in st.session_state:
+    st.session_state.briefing_md = ""
+if "briefing_pdf" not in st.session_state:
+    st.session_state.briefing_pdf = None
+
 
 st.set_page_config(page_title="Assistente de Requisitos (MVP)", page_icon="🧭")
 
@@ -57,6 +62,35 @@ if st.sidebar.button("✅ Testar /health"):
         st.sidebar.success(f"OK: {r.json()}")
     except Exception as e:
         st.sidebar.error(f"Erro: {e}")
+
+# --- Gerar ATA / Briefing ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📝 ATA / Briefing")
+
+if st.sidebar.button("Gerar ATA desta sessão"):
+    try:
+        # 1) gera/atualiza ATA em Markdown
+        r = requests.post(
+            f"{backend_url}/briefing",
+            json={"session_id": st.session_state.session_id},
+            timeout=15,
+        )
+        r.raise_for_status()
+        data = r.json()
+        st.session_state.briefing_md = data.get("markdown", "")
+
+        # 2) já busca o PDF correspondente
+        r_pdf = requests.get(
+            f"{backend_url}/briefing/pdf/{st.session_state.session_id}",
+            timeout=20,
+        )
+        r_pdf.raise_for_status()
+        st.session_state.briefing_pdf = r_pdf.content
+
+        st.sidebar.success("ATA (MD + PDF) gerada com sucesso!")
+    except Exception as e:
+        st.sidebar.error(f"Erro ao gerar ATA: {e}")
+
 
 # ---------- Chamada à API ----------
 def call_next(answer: str | None = None):
@@ -133,3 +167,32 @@ if user_input:
 
     # 3) força re-render para já exibir a resposta do "assistente"
     st.rerun()
+
+
+# ================== ATA / Briefing ==================
+if st.session_state.briefing_md:
+    st.markdown("---")
+    st.markdown("## 📄 ATA / Briefing da Entrevista")
+    st.markdown(st.session_state.briefing_md)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.download_button(
+            label="📥 Baixar ATA em .md",
+            data=st.session_state.briefing_md,
+            file_name=f"ata_{st.session_state.session_id}.md",
+            mime="text/markdown",
+        )
+
+    with col2:
+        if st.session_state.briefing_pdf:
+            st.download_button(
+                label="📥 Baixar ATA em .pdf",
+                data=st.session_state.briefing_pdf,
+                file_name=f"ata_{st.session_state.session_id}.pdf",
+                mime="application/pdf",
+            )
+        else:
+            st.info("Clique em *Gerar ATA desta sessão* na barra lateral para criar o PDF.")
+
