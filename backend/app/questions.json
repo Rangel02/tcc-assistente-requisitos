@@ -1,17 +1,17 @@
 [
   {
     "id": "start",
-    "text": "Oi! Para começar, qual é o nome da demanda ou projeto?",
+    "text": "Para começar, qual é o nome dessa demanda ou projeto?",
     "next": "id_codigo"
   },
   {
     "id": "id_codigo",
-    "text": "Existe algum código interno, chamado ou ticket relacionado a essa demanda? Se sim, qual?",
+    "text": "Existe algum código interno, chamado ou ticket que é ligado a essa demanda? Se tiver, qual é?",
     "next": "id_solicitante"
   },
   {
     "id": "id_solicitante",
-    "text": "Quem está trazendo essa necessidade? (nome, área, função)",
+    "text": "Quem está trazendo essa necessidade? (nome, área e função, se possível)",
     "next": "ctx_motivacao"
   },
   {
@@ -21,42 +21,42 @@
   },
   {
     "id": "ctx_dor",
-    "text": "Qual é o principal problema ou dor que vocês querem resolver?",
+    "text": "Qual é o principal problema ou dor que vocês querem resolver com essa demanda?",
     "next": "ctx_consequencia"
   },
   {
     "id": "ctx_consequencia",
-    "text": "O que acontece hoje quando esse problema surge?",
+    "text": "O que acontece hoje quando esse problema aparece no dia a dia?",
     "next": "ctx_impactados"
   },
   {
     "id": "ctx_impactados",
-    "text": "Quem são os principais impactados por esse problema? (usuários, áreas, clientes)",
+    "text": "Quem são as pessoas ou as áreas mais impactadas por esse problema? (por exemplo: usuários internos, clientes, fornecedores)",
     "next": "ctx_sem_acao"
   },
   {
     "id": "ctx_sem_acao",
-    "text": "Se nada fosse feito sobre esse problema, o que você imagina que aconteceria em 6 a 12 meses?",
+    "text": "Se nada fosse feito sobre essa demanda, o que você acha que poderia acontecer em 6 a 12 meses?",
     "next": "obj_ideal"
   },
   {
     "id": "obj_ideal",
-    "text": "Pensando no melhor cenário possível, qual seria o resultado ideal dessa entrega?",
+    "text": "Pensando em um cenário ideal, como você descreveria o resultado esperado dessa solução?",
     "next": "obj_sucesso"
   },
   {
     "id": "obj_sucesso",
-    "text": "Como vocês saberão que a solução deu certo? Há algum indicador ou métrica de sucesso que faça sentido acompanhar?",
+    "text": "Como vocês vão saber que essa solução deu certo? Por acaso vocês teriam algum indicador ou métrica que faça sentido acompanhar?",
     "next": "obj_beneficio"
   },
   {
     "id": "obj_beneficio",
-    "text": "Qual é o principal benefício esperado dessa solução? (ex.: agilidade, redução de custo, visibilidade, controle)",
+    "text": "Qual é o principal benefício que vocês esperam com essa demanda? (por exemplo: agilidade, redução de custo, menos erro, mais visibilidade)",
     "next": "gate_processo"
   },
   {
     "id": "gate_processo",
-    "text": "Você gostaria de detalhar um pouco como esse processo funciona hoje na prática? (responda 'sim' ou 'nao')",
+    "text": "Você gostaria de detalhar um pouco mais como esse processo está funcionando hoje na prática? (responda 'sim' ou 'nao')",
     "branches": {
       "sim": "proc_fluxo",
       "nao": "usuarios_quem",
@@ -66,42 +66,42 @@
   },
   {
     "id": "proc_fluxo",
-    "text": "Como esse processo funciona hoje na prática, passo a passo?",
+    "text": "Me conta como esse processo funciona hoje, passo a passo. Como normalmente ele começa e como termina?",
     "next": "proc_ferramentas"
   },
   {
     "id": "proc_ferramentas",
-    "text": "Quais sistemas, planilhas ou ferramentas vocês usam hoje para executar esse processo?",
+    "text": "Quais sistemas, planilhas ou ferramentas vocês usam hoje para fazer esse processo acontecer?",
     "next": "proc_gargalos"
   },
   {
     "id": "proc_gargalos",
-    "text": "Onde você enxerga hoje os maiores gargalos, retrabalhos ou chances de erro nesse processo?",
+    "text": "Onde você enxerga hoje os maiores gargalos, retrabalhos ou pontos em que costuma dar erro?",
     "next": "proc_integracoes"
   },
   {
     "id": "proc_integracoes",
-    "text": "Esse processo depende de outros sistemas ou integrações? Se sim, quais?",
+    "text": "Esse processo depende de algum outro sistema ou integração? Se sim, quais são esses pontos de integração?",
     "next": "usuarios_quem"
   },
   {
     "id": "usuarios_quem",
-    "text": "Quem usará essa solução no dia a dia?",
+    "text": "Quem vai usar essa solução no dia a dia?",
     "next": "usuarios_perfis"
   },
   {
     "id": "usuarios_perfis",
-    "text": "Existem perfis diferentes de usuários? (ex.: operador, gestor, cliente, fornecedor)",
+    "text": "Você enxerga perfis diferentes de usuário? (por exemplo: operador, gestor, cliente, fornecedor)",
     "next": "usuarios_decisores"
   },
   {
     "id": "usuarios_decisores",
-    "text": "Quem normalmente toma a decisão final sobre aprovações ou priorizações relacionadas a esse processo?",
+    "text": "Quem normalmente toma a decisão final sobre aprovação ou priorização quando o assunto é esse processo?",
     "next": "gate_qualidade"
   },
   {
     "id": "gate_qualidade",
-    "text": "Você gostaria de registrar algum ponto sobre desempenho, segurança, LGPD ou restrições técnicas que essa solução precisa respeitar? (responda 'sim' ou 'nao')",
+    "text": "Você quer registrar alguma preocupação sobre desempenho, segurança, LGPD ou disponibilidade dessa solução? (responda 'sim' ou 'nao')",
     "branches": {
       "sim": "qualidade_req",
       "nao": "req_geral",
@@ -111,32 +111,32 @@
   },
   {
     "id": "qualidade_req",
-    "text": "Quais preocupações você tem em relação a desempenho, segurança, LGPD ou disponibilidade dessa solução?",
+    "text": "Quais seriam os cuidados que essa solução precisa ter em relação a desempenho, segurança, LGPD ou disponibilidade?",
     "next": "req_geral"
   },
   {
     "id": "req_geral",
-    "text": "Pensando na solução ideal, o que você imagina que essa funcionalidade precisa fazer no dia a dia?",
+    "text": "Pensando na solução em si, o que você imagina que ela precisa fazer no dia a dia para atender essa demanda?",
     "next": "req_obrigatorios"
   },
   {
     "id": "req_obrigatorios",
-    "text": "Existem requisitos obrigatórios ou regras de negócio que precisam ser respeitadas? (ex.: validações, limites, aprovações obrigatórias)",
+    "text": "Existem requisitos obrigatórios ou regras de negócio que não podem faltar? (por exemplo: validações, limites, aprovações obrigatórias)",
     "next": "req_naopode"
   },
   {
     "id": "req_naopode",
-    "text": "Há algo que 'não pode acontecer de jeito nenhum' com essa solução?",
+    "text": "Tem algo que não pode acontecer de jeito nenhum com essa solução? (por exemplo: liberar sem aprovação, perder dado, atrasar além de um certo ponto)",
     "next": "req_referencia"
   },
   {
     "id": "req_referencia",
-    "text": "Existe alguma referência (tela, planilha, sistema) que se pareça com o que vocês esperam?",
+    "text": "Você tem alguma referência que ajude a ilustrar o que espera? (pode ser outra tela, planilha, sistema ou fluxo que já usa hoje)",
     "next": "gate_mvp"
   },
   {
     "id": "gate_mvp",
-    "text": "Você gostaria de priorizar o que é essencial para uma primeira versão (MVP)? (responda 'sim' ou 'nao')",
+    "text": "Quer separar o que é essencial para a primeira versão (MVP) e o que pode ficar para depois? (responda 'sim' ou 'nao')",
     "branches": {
       "sim": "mvp_essencial",
       "nao": "prio_nivel",
@@ -146,47 +146,47 @@
   },
   {
     "id": "mvp_essencial",
-    "text": "Pensando em uma primeira versão (MVP), o que é essencial estar incluído para já gerar valor?",
+    "text": "Pensando em uma primeira entrega, o que você considera essencial para já gerar valor?",
     "next": "mvp_posterior"
   },
   {
     "id": "mvp_posterior",
-    "text": "E o que poderia ficar para versões futuras, caso seja necessário fatiar a entrega?",
+    "text": "E o que poderia ficar para versões futuras, caso a gente precise fatiar a entrega?",
     "next": "prio_nivel"
   },
   {
     "id": "prio_nivel",
-    "text": "Qual é a prioridade dessa demanda em relação às demais iniciativas em andamento?",
+    "text": "Qual é a prioridade dessa demanda em relação às outras iniciativas que vocês têm hoje?",
     "next": "prazo_critico"
   },
   {
     "id": "prazo_critico",
-    "text": "Existe alguma data crítica ou evento importante relacionado a essa demanda? (ex.: auditoria, fechamento, contrato)",
+    "text": "Existe alguma data crítica ou evento importante ligado a essa demanda? (por exemplo: auditoria, fechamento, contrato, data de lançamento)",
     "next": "contato_ponto_focal"
   },
   {
     "id": "contato_ponto_focal",
-    "text": "Quem será o ponto focal de contato para dúvidas e validações ao longo do desenvolvimento?",
+    "text": "Quem vai ser o ponto focal para dúvidas e validações ao longo desse trabalho?",
     "next": "contato_formato"
   },
   {
     "id": "contato_formato",
-    "text": "Qual é o melhor formato de acompanhamento para vocês? (ex.: e-mail, reuniões periódicas, protótipos)",
+    "text": "Qual é o melhor formato de acompanhamento para vocês? (por exemplo: e-mail, reunião periódica, protótipo em ambiente de teste)",
     "next": "contato_validacao"
   },
   {
     "id": "contato_validacao",
-    "text": "Como vocês preferem validar a solução antes de ir para produção? (ex.: mockups, ambiente de teste, walkthrough)",
+    "text": "Como vocês preferem validar a solução antes de colocar em produção? (por exemplo: mockups, ambiente de teste, walkthrough da tela)",
     "next": "extra_info"
   },
   {
     "id": "extra_info",
-    "text": "Há alguma outra informação que você considera importante registrar sobre essa demanda e que ainda não foi comentada?",
+    "text": "Tem mais alguma informação que você acha importante registrar sobre essa demanda e que a gente não comentou ainda?",
     "next": "fim"
   },
   {
     "id": "fim",
-    "text": "Obrigado! Encerramos a entrevista inicial. Em seguida, vou gerar a ATA com o resumo do que conversamos.",
+    "text": "Obrigado, finalizamos a entrevista inicial. Em seguida, eu vou montar o relatório com o resumo do que você respondeu.",
     "next": null
   }
 ]
