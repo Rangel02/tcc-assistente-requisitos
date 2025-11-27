@@ -204,29 +204,35 @@ def call_next(answer: str | None = None) -> None:
 # Aqui eu estou organizando o chat, o botão de reset e a nossa exibição da ATA.
 # -----------------------------------------------------------------------------
 
-# Botão de reset da entrevista
+# Botão de reset
 col1, col2 = st.columns(2)
 with col1:
     if st.button("Reiniciar entrevista", use_container_width=True):
-        """
-        Aqui eu aviso o backend para resetar a sessão atual
-        e também limpo o estado local do Streamlit.
-        """
+        # aqui eu vou aproveitar o id antigo, no caso só para avisar o backend que pode limpar essa sessão em memória
+        old_session_id = st.session_state.session_id
         try:
             requests.post(
                 f"{backend_url}/reset",
-                json={"session_id": st.session_state.session_id},
+                json={"session_id": old_session_id},
                 timeout=5,
             )
         except Exception as e:
             st.sidebar.warning(f"Não consegui resetar no backend: {e}")
 
+        # a partir daqui que eu começo realmente uma nova entrevista, com um novo session_id
+        st.session_state.session_id = str(uuid.uuid4())
         st.session_state.messages = []
         st.session_state.current_id = None
         st.session_state.started = False
+
+        # limpo também qualquer ATA que já tinha sido gerada
+        st.session_state.briefing_md = ""
+        st.session_state.briefing_pdf = None
+
         st.rerun()
 
-# Auto-start: se ainda não começou e não temos current_id, pede a 1ª pergunta
+
+# Auto-start: se ainda não começou e não temos current_id, vai pedir a 1ª pergunta
 if not st.session_state.started and st.session_state.current_id is None:
     # sem resposta -> backend retorna a 1ª pergunta do fluxo
     call_next()

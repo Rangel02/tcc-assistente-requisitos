@@ -172,14 +172,16 @@ def interview_next(req: NextRequest):
     #    aqui eu aceito 'branch' ou 'branches' no questions.json
     branch = curr.get("branch") or curr.get("branches")
     if isinstance(branch, dict) and ans_norm:
-        # tenta bater exato
-        next_id = branch.get(ans_norm) or branch.get("*") or branch.get("default")
+        if ans_norm in branch:
+            next_id = branch[ans_norm]
+        elif "default" in branch:
+            next_id = branch["default"]
 
-    # 2) Fallback 'next'
+    # 2) Fallback pro 'next' normal
     if not next_id:
         next_id = curr.get("next")
 
-    # 3) Se ainda não houver próximo, eu forço para "fim"
+    # 3) Se ainda não vier nada, eu forço para "fim"
     if not next_id:
         next_id = "fim"
 
@@ -284,8 +286,11 @@ def _clean_for_pdf(text: str) -> str:
     mantendo acentos e cedilha.
     """
     text = text.replace("**", "").replace("_", "").replace("`", "")
-    # mantém caracteres até 255 (acentos ok), remove emojis e cia
-    return "".join(ch for ch in text if 32 <= ord(ch) <= 255)
+    result = []
+    for ch in text:
+        if 32 <= ord(ch) <= 255:
+            result.append(ch)
+    return "".join(result)
 
 
 def build_briefing_pdf_bytes(session_id: str) -> bytes:
