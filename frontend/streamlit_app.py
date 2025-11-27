@@ -35,23 +35,136 @@ if "briefing_pdf" not in st.session_state:
 
 
 # -----------------------------------------------------------------------------
-# Configuração básica da página
+# Configuração básicona da página
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Assistente de Levantamento de Requisitos",
     layout="wide",
 )
 
-st.title("Assistente de Levantamento de Requisitos – Protótipo de TCC")
-st.write(
-    "Aqui eu estou simulando a entrevista inicial com o cliente, "
-    "fazendo perguntas em sequência e depois gerando um relatório com o que foi respondido."
+# aqui eu dou uma ajeitada no visual: fundo roxo/azul e um bloco branco no meio
+st.markdown(
+    """
+    <style>
+        .stApp {
+            background: linear-gradient(135deg, #1b1838, #243b6b);
+        }
+
+        /* fundo da sidebar */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #181533, #222a57);
+        }
+
+        /* aqui eu to meio que mexendo na cor do texto "normal" da sidebar (títulos, labels, etc) */
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3 {
+            color: #f5f5f5;
+        }
+
+        /* aqui eu to deixando os blocos de código escuros, com texto claro,
+           pra aparecer o Backend URL e o Session ID direitinho */
+        [data-testid="stSidebar"] pre,
+        [data-testid="stSidebar"] code {
+            background-color: #141326 !important;
+            color: #f5f5f5 !important;
+        }
+
+        /* botões da sidebar (redetectar /health, testar /health, gerar relatório) */
+        [data-testid="stSidebar"] .stButton > button {
+            background-color: #ff4b6a;      /* rosa/vermelho que combina com a aba ativa */
+            color: #ffffff;
+            border-radius: 6px;
+            border: 1px solid #ff99aa;
+            font-size: 0.9rem;
+        }
+
+        [data-testid="stSidebar"] .stButton > button:hover {
+            background-color: #ff6b86;
+            border-color: #ffc2cc;
+        }
+
+        [data-testid="stSidebar"] .stButton > button:disabled {
+            background-color: #44425f;      /* quando estiver desabilitado, fica só mais apagadinho */
+            border-color: #5a5875;
+            color: #bfbfd4;
+        }
+
+        /* cabeçalho lá em cima (onde fica o Deploy e os três pontinhos) */
+        [data-testid="stHeader"] {
+            background: transparent;        /* some com o branco, deixa ver o gradiente da stApp */
+            color: #f5f5f5;
+        }
+
+        /* só pra tirar qualquer sombra chata no header, se tiver */
+        [data-testid="stHeader"] div {
+            box-shadow: none !important;
+        }
+        
+        .block-container {
+            /* aqui eu deixo um cinza/azul bem clarinho, pra não ser branco estourado */
+            background-color: #f3f4fa;
+            padding: 2rem 2.5rem 2.5rem 2.5rem;
+
+            /* aumento a margem de cima pra esse bloco não ficar grudado no topo */
+            margin: 2.5rem 2rem 2.5rem 0.5rem;
+
+            border-radius: 10px;
+            max-width: 1250px;
+            border: 1px solid #dde1f5;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+        }
+
+        /* aqui eu deixo a caixinha do "Digite sua resposta..." um pouco mais escura pra destacar */
+        [data-testid="stChatInput"] {
+            background-color: #e3e6f2;   /* cinza azulado mais escuro que o fundo do card */
+            border-radius: 6px;
+        }
+
+        /* também to ajustando o textarea em si, pra não ficar branco puro */
+        [data-testid="stChatInput"] textarea {
+            background-color: #e3e6f2;
+            border-radius: 6px;
+        }
+
+        /* aqui eu só centralizo o título principal dentro do bloco branco */
+        .block-container h1 {
+            text-align: center;
+        }
+
+        /* aqui eu deixo os botões de download (Markdown / PDF) mais visíveis */
+        div[data-testid="stDownloadButton"] > button {
+            background-color: #ff4b6a;
+            color: #ffffff !important;          /* aqui eu garanto que o texto fica branco */
+            border-radius: 6px;
+            border: 1px solid #ff99aa;
+            font-size: 0.9rem;
+            padding: 0.4rem 1.2rem;
+        }
+
+        div[data-testid="stDownloadButton"] > button:hover {
+            background-color: #ff6b86;
+            border-color: #ffc2cc;
+            color: #ffffff !important;          /* no hover também, nada de texto rosa */
+        }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
-# um subtítulo rápido explicando que é um chat simples de entrevista
-st.subheader("Fluxo de perguntas com foco em levantamento de requisitos")
-st.write("Abaixo eu mostro um chat simples para conduzir a entrevista com o stakeholder.")
 
+st.title("Assistente de Levantamento de Requisitos")
+
+
+# um subtítulo rápido explicando que é um chat simples de entrevista
+st.subheader("Como funciona essa tela")
+st.write("Você responde às perguntas na aba **Entrevista** e, quando terminar, gera o relatório na barra lateral "
+    "e visualiza/baixa a ATA na aba **Relatório / ATA**.")
+st.divider()
 
 # -----------------------------------------------------------------------------
 # Config do backend (ENV > autodetect)
@@ -204,88 +317,99 @@ def call_next(answer: str | None = None) -> None:
 # Aqui eu estou organizando o chat, o botão de reset e a nossa exibição da ATA.
 # -----------------------------------------------------------------------------
 
-# Botão de reset
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("Reiniciar entrevista", use_container_width=True):
-        # aqui eu vou aproveitar o id antigo, no caso só para avisar o backend que pode limpar essa sessão em memória
-        old_session_id = st.session_state.session_id
-        try:
-            requests.post(
-                f"{backend_url}/reset",
-                json={"session_id": old_session_id},
-                timeout=5,
-            )
-        except Exception as e:
-            st.sidebar.warning(f"Não consegui resetar no backend: {e}")
-
-        # a partir daqui que eu começo realmente uma nova entrevista, com um novo session_id
-        st.session_state.session_id = str(uuid.uuid4())
-        st.session_state.messages = []
-        st.session_state.current_id = None
-        st.session_state.started = False
-
-        # limpo também qualquer ATA que já tinha sido gerada
-        st.session_state.briefing_md = ""
-        st.session_state.briefing_pdf = None
-
-        st.rerun()
-
-
-# Auto-start: se ainda não começou e não temos current_id, vai pedir a 1ª pergunta
+# Auto-start: se ainda não começou e não temos current_id, ai sim, agora vai pedir a 1ª pergunta para iniciar
 if not st.session_state.started and st.session_state.current_id is None:
     # sem resposta -> backend retorna a 1ª pergunta do fluxo
     call_next()
     st.session_state.started = True
 
-# Histórico do chat (assistente e usuário)
-for msg in st.session_state.messages:
-    role = "assistant" if msg["role"] == "assistant" else "user"
-    with st.chat_message(role):
-        st.markdown(msg["content"])
+# aqui eu separei a parte da entrevista e a parte do relatório em duas abas pra ficar mais organizadin
+tab_chat, tab_ata = st.tabs(["🗣️ Entrevista", "📄 Relatório / ATA"])
 
-# Entrada do usuário
-user_input = st.chat_input("Digite sua resposta...")
-if user_input:
-    # 1) mostra a fala do usuário no chat
-    st.session_state.messages.append({"role": "user", "content": user_input})
+# Botão de reset + chat ficam na aba de Entrevista
+with tab_chat:
+    # Botão de reset
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Reiniciar entrevista", use_container_width=True):
+            # aqui eu vou aproveitar o id antigo, no caso só para avisar o backend que pode limpar essa sessão em memória
+            old_session_id = st.session_state.session_id
+            try:
+                requests.post(
+                    f"{backend_url}/reset",
+                    json={"session_id": old_session_id},
+                    timeout=5,
+                )
+            except Exception as e:
+                st.sidebar.warning(f"Não consegui resetar no backend: {e}")
 
-    # 2) chama o backend para pegar a próxima mensagem / próximo nó
-    call_next(user_input)
+            # a partir daqui que eu começo realmente uma nova entrevista, com um novo session_id
+            st.session_state.session_id = str(uuid.uuid4())
+            st.session_state.messages = []
+            st.session_state.current_id = None
+            st.session_state.started = False
 
-    # 3) força re-render para já exibir a resposta do "assistente"
-    st.rerun()
+            # limpo também qualquer ATA que já tinha sido gerada
+            st.session_state.briefing_md = ""
+            st.session_state.briefing_pdf = None
+
+            st.rerun()
+
+    # Histórico do chat (assistente e usuário)
+    for msg in st.session_state.messages:
+        role = "assistant" if msg["role"] == "assistant" else "user"
+        with st.chat_message(role):
+            st.markdown(msg["content"])
+
+    # Entrada do usuário
+    user_input = st.chat_input("Digite sua resposta...")
+    if user_input:
+        # 1) mostra a fala do usuário no chat
+        st.session_state.messages.append({"role": "user", "content": user_input})
+
+        # 2) chama o backend para pegar a próxima mensagem / próximo nó
+        call_next(user_input)
+
+        # 3) força re-render para já exibir a resposta do "assistente"
+        st.rerun()
 
 
 # -----------------------------------------------------------------------------
 # ATA / Briefing
 # Aqui eu estou mostrando o relatório só se ele já tiver sido gerado.
 # -----------------------------------------------------------------------------
-if st.session_state.briefing_md:
-    st.markdown("---")
-    st.markdown("## Relatório da entrevista de levantamento de requisitos")
-    st.markdown(st.session_state.briefing_md)
+with tab_ata:
+    if st.session_state.briefing_md:
+        st.markdown("---")
+        st.markdown("## Relatório da entrevista de levantamento de requisitos")
+        st.markdown(st.session_state.briefing_md)
 
-    col1, col2 = st.columns(2)
+        col1, col2 = st.columns(2)
 
-    with col1:
-        st.download_button(
-            label="Baixar o relatório em formato Markdown (.md)",
-            data=st.session_state.briefing_md,
-            file_name=f"ata_{st.session_state.session_id}.md",
-            mime="text/markdown",
-        )
-
-    with col2:
-        if st.session_state.briefing_pdf:
+        with col1:
             st.download_button(
-                label="Baixar o relatório em PDF (.pdf)",
-                data=st.session_state.briefing_pdf,
-                file_name=f"ata_{st.session_state.session_id}.pdf",
-                mime="application/pdf",
+                label="Baixar o relatório em formato Markdown (.md)",
+                data=st.session_state.briefing_md,
+                file_name=f"ata_{st.session_state.session_id}.md",
+                mime="text/markdown",
             )
-        else:
-            st.info(
-                "O PDF ainda não foi carregado. Porfavor gere o relatório pela barra lateral "
-                "para criar o PDF correspondente."
-            )
+
+        with col2:
+            if st.session_state.briefing_pdf:
+                st.download_button(
+                    label="Baixar o relatório em PDF (.pdf)",
+                    data=st.session_state.briefing_pdf,
+                    file_name=f"ata_{st.session_state.session_id}.pdf",
+                    mime="application/pdf",
+                )
+            else:
+                st.info(
+                    "O PDF ainda não foi carregado. Por favor gere o relatório pela barra lateral "
+                    "para criar o PDF correspondente."
+                )
+    else:
+        st.info(
+            "Ainda não existe relatório gerado para esta sessão. "
+            "Conclua a entrevista na aba **Entrevista** e depois use o botão da barra lateral "
+            "para gerar a ATA em Markdown/PDF."
+        )
