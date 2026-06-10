@@ -40,7 +40,9 @@ A proposta não é substituir o trabalho do Product Owner, mas oferecer um apoio
 
 O sistema foi dividido em duas partes principais: frontend e backend.
 
+```text
 Frontend Streamlit  →  API FastAPI  →  SQLite
+```
 
 O frontend é responsável por exibir a entrevista em formato de chat, receber as respostas do usuário e apresentar a ATA gerada.
 
@@ -121,29 +123,38 @@ O projeto possui scripts PowerShell para simplificar a execução local.
 
 ### 1. Clonar o repositório
 
+```bash
 git clone https://github.com/Rangel02/tcc-assistente-requisitos.git
 cd tcc-assistente-requisitos
-
+```
 
 ### 2. Iniciar o backend
 
 Em um terminal PowerShell, execute:
 
+```powershell
 .\scripts\run_backend.ps1
+```
 
 O backend será iniciado em:
 
+```text
 http://127.0.0.1:8010
+```
 
 A documentação automática da API pode ser acessada em:
 
+```text
 http://127.0.0.1:8010/docs
+```
 
 ### 3. Iniciar o frontend
 
 Em outro terminal PowerShell, execute:
 
+```powershell
 .\scripts\run_frontend.ps1
+```
 
 A interface Streamlit será aberta no navegador.
 
@@ -153,26 +164,36 @@ Também é possível executar o projeto manualmente.
 
 ### 1. Criar ambiente virtual
 
+```bash
 python -m venv .venv
+```
 
 ### 2. Ativar ambiente virtual no Windows
 
+```powershell
 .\.venv\Scripts\Activate.ps1
+```
 
 ### 3. Instalar dependências
 
+```bash
 pip install -r requirements.txt
+```
 
 ### 4. Iniciar backend
 
+```bash
 python -m uvicorn backend.app.main:app --reload --port 8010
+```
 
 ### 5. Iniciar frontend
 
 Em outro terminal:
 
+```bash
 set BACKEND_URL=http://127.0.0.1:8010
 python -m streamlit run frontend/streamlit_app.py
+```
 
 ## Endpoints principais da API
 
