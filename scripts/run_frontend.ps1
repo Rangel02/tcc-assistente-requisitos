@@ -1,24 +1,24 @@
 # scripts/run_frontend.ps1
 # Ativa a venv e sobe o Streamlit apontando pro backend local
 
-# Raiz do projeto
+# Garante que estamos na raiz do projeto.
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-# Libera execução só nesta sessão
+# Libera a execução de scripts apenas nesta sessão do PowerShell.
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
-# Ativa a venv (cria se não existir)
+# Cria a venv se ela ainda não existir e depois ativa o ambiente.
 if (-not (Test-Path ".\.venv")) {
   python -m venv .venv
 }
 .\.venv\Scripts\Activate.ps1
 
-# Garante dependências
+# Instala as dependências necessárias para rodar o frontend.
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 
-# (Opcional) definir BACKEND_URL desta sessão
+# Define a URL do backend usada pelo Streamlit nesta sessão.
 $env:BACKEND_URL = "http://127.0.0.1:8010"
 
-# Sobe o Streamlit
+# Inicia a interface Streamlit.
 python -m streamlit run frontend/streamlit_app.py

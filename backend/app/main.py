@@ -16,8 +16,9 @@ from .repository import upsert_session, list_sessions, get_session_by_id
 
 
 # -----------------------------------------------------------------------------
-# Inicialização da API
-# Aqui eu to subindo a aplicação FastAPI e garanto que o banco esteja criado.
+# Ponto de partida da API.
+# Aqui eu subo o FastAPI e já garanto que o banco/tabelas existam antes de qualquer 
+# rota ser usada.
 # -----------------------------------------------------------------------------
 app = FastAPI(title="Assistente de Requisitos API", version="0.2.0")
 
@@ -31,7 +32,7 @@ def on_startup():
     create_db_and_tables()
 
 
-# CORS liberado para desenvolvimento (vai facilitar a testar front/back em portas diferentes)
+# Libero o CORS para facilitar a comunicação entre o Streamlit e o FastAPI rodando em portas diferentes.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -46,14 +47,15 @@ app.add_middleware(
 DATA_PATH = Path(__file__).parent / "questions.json"
 with DATA_PATH.open("r", encoding="utf-8") as f:
     QUESTIONS_LIST = json.load(f)
-    # aqui eu transformo a lista numa dict para acesso rápido por id
+    # Aqui eu carrego o arquivo questions.json, que é basicamente o coração do fluxo da entrevista.
+    # Depois transformo a lista em um dicionário para encontrar cada pergunta pelo id com mais facilidade.
     QUESTIONS = {node["id"]: node for node in QUESTIONS_LIST}
 
 
 # -----------------------------------------------------------------------------
-# Memória por sessão (MVP)
-# Aqui eu simplesmente to guardando o histórico da entrevista em memória, além do banco.
-# SESSIONS[session_id] = [ {id, question, answer}, ... ]
+# Histórico em memória usado durante a entrevista.
+# Mesmo salvando no banco, manter isso aqui facilita o fluxo enquanto o usuário conversa com o assistente.
+# Estrutura esperada: SESSIONS[session_id] = [{id, question, answer}, ...]
 # -----------------------------------------------------------------------------
 SESSIONS: Dict[str, List[Dict]] = {}
 
@@ -112,7 +114,8 @@ def health():
 
 
 # -----------------------------------------------------------------------------
-# Fluxo principal da entrevista
+# Rota principal da entrevista.
+# É aqui que o sistema recebe uma resposta, salva no histórico e decide qual será a próxima pergunta.
 # -----------------------------------------------------------------------------
 @app.post("/interview/next", response_model=NextResponse)
 def interview_next(req: NextRequest):
@@ -127,10 +130,10 @@ def interview_next(req: NextRequest):
     - No fim, eu salvo um snapshot da sessão no banco (SQLite via SQLModel).
     """
 
-    # garante que a sessão está em memória (histórico simples)
+    # Se a sessão ainda não existe em memória, eu crio uma lista vazia para começar o histórico.
     SESSIONS.setdefault(req.session_id, [])
 
-    # --- normalização: tratar "null"/"none"/"" como None ---
+    # Trato respostas vazias ou strings como "null" e "none" como ausência de resposta.
     cid = req.current_id
     ans = req.answer
     if isinstance(cid, str) and cid.strip().lower() in ("", "null", "none"):
@@ -138,7 +141,7 @@ def interview_next(req: NextRequest):
     if isinstance(ans, str) and ans.strip().lower() in ("", "null", "none"):
         ans = None
 
-    # se veio a resposta do nó anterior, salva no histórico em memória
+    # Se o usuário respondeu a pergunta anterior, salvo essa pergunta e resposta no histórico da sessão.
     if ans is not None and cid in QUESTIONS:
         qnode = QUESTIONS[cid]
         SESSIONS[req.session_id].append(
@@ -149,12 +152,13 @@ def interview_next(req: NextRequest):
             }
         )
 
-    # primeira pergunta: se não tem current_id, eu começo pelo "start"
+    # Se ainda não existe pergunta atual, significa que a entrevista está começando pelo nó "start".
     if not cid:
         first = QUESTIONS.get("start")
         return NextResponse(message=first["text"], next_id="start", done=False)
 
-    # nó atual
+    # Se cair aqui, é porque veio um id que não existe na árvore de perguntas.
+    # Nesse caso, retorno erro para não seguir com um fluxo quebrado.
     curr = QUESTIONS.get(cid)
     if not curr:
         # se cair aqui é porque o fluxo ficou inconsistente
@@ -164,12 +168,12 @@ def interview_next(req: NextRequest):
             done=True,
         )
 
-    # -------- decidir o PRÓXIMO ID --------
+    # Agora vem a decisão da próxima pergunta.
     next_id = None
     ans_norm = (ans or "").strip().lower()
 
     # 1) Branch por resposta (se existir):
-    #    aqui eu aceito 'branch' ou 'branches' no questions.json
+    # Primeiro tento seguir uma ramificação específica, caso a pergunta atual tenha branches.
     branch = curr.get("branch") or curr.get("branches")
     if isinstance(branch, dict) and ans_norm:
         if ans_norm in branch:
@@ -178,6 +182,7 @@ def interview_next(req: NextRequest):
             next_id = branch["default"]
 
     # 2) Fallback pro 'next' normal
+    # Se não tiver branch compatível com a resposta, sigo o próximo nó padrão definido em "next".
     if not next_id:
         next_id = curr.get("next")
 
@@ -185,7 +190,7 @@ def interview_next(req: NextRequest):
     if not next_id:
         next_id = "fim"
 
-    # Carrega o nó seguinte (se não for o fim)
+    # Depois de descobrir o próximo id, carrego o texto da próxima pergunta para devolver ao frontend.
     nxt = QUESTIONS.get(next_id) if next_id != "fim" else None
     if next_id != "fim" and not nxt:
         return NextResponse(
@@ -194,23 +199,24 @@ def interview_next(req: NextRequest):
             done=True,
         )
 
-    # calcule o done e a mensagem final
+    # Aqui eu verifico se a entrevista chegou ao fim e preparo a mensagem final.
     done = next_id == "fim"
     message = nxt["text"] if not done else "Entrevista finalizada!"
 
     # ====== PERSISTÊNCIA ======
-    # Aqui eu monto um snapshot da sessão e salvo no banco.
-    # Se der erro de banco, eu não quebro o fluxo da entrevista.
+    # Salvo um snapshot da sessão no banco.
+    # A entrevista continua funcionando mesmo se houver algum erro de persistência,
+    # porque o objetivo aqui é não travar a conversa do usuário no meio do fluxo.
     try:
         snapshot = {
             "current_id": next_id,
             "done": bool(done),
-            # agora realmente salvando o histórico completo no banco
+            # Aqui o histórico completo da entrevista é persistido no SQLite.
             "history": SESSIONS.get(req.session_id),
         }
         upsert_session(session_id=req.session_id, answers_json=snapshot)
     except Exception:
-        # não vamos matar o fluxo se der erro de persistência
+        # Se der erro ao salvar, registro o problema e sigo sem derrubar a entrevista.
         pass
     # ====== FIM PERSISTÊNCIA ======
 
@@ -218,7 +224,8 @@ def interview_next(req: NextRequest):
 
 
 # -----------------------------------------------------------------------------
-# Geração de ATA em Markdown
+# Geração da ATA em Markdown.
+# Essa função pega tudo que foi respondido na entrevista e monta um documento organizado.
 # -----------------------------------------------------------------------------
 def build_briefing_md(session_id: str) -> str:
     """
@@ -229,7 +236,7 @@ def build_briefing_md(session_id: str) -> str:
     e, se não achar nada lá, eu caio para o histórico em memória (SESSIONS).
     """
 
-    # tenta buscar as respostas da sessão direto no nosso banco
+    # Primeiro tento buscar o histórico salvo no banco, porque ele é a fonte mais segura.
     db_sess = get_session_by_id(session_id)
     qa = None
 
@@ -297,7 +304,7 @@ def build_briefing_pdf_bytes(session_id: str) -> bytes:
     """
     Aqui eu gero o PDF da ATA a partir do texto em Markdown.
 
-    A ideia é simples:
+    A ideia é tranquila:
     - primeiro eu chamo a função build_briefing_md(session_id) para montar o texto base;
     - depois eu vou jogando esse conteúdo linha a linha no PDF, ajustando fonte e quebras;
     - também desenho um cabeçalho e um rodapé em cada página, com o contexto do TCC.

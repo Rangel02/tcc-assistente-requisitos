@@ -5,11 +5,12 @@ import streamlit as st
 import uuid
 
 # -----------------------------------------------------------------------------
-# Estado inicial da aplicação
-# Aqui eu garanto que todas as variáveis de sessão existem antes de usar.
+# Estado inicial da aplicação.
+# Antes de desenhar a tela, eu garanto que todas as variáveis de sessão existem.
+# Isso evita erro quando o Streamlit recarrega a página.
 # -----------------------------------------------------------------------------
 
-# aqui eu controlo o id da sessão atual da entrevista
+# Identificador da entrevista atual.
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
@@ -29,13 +30,13 @@ if "started" not in st.session_state:
 if "briefing_md" not in st.session_state:
     st.session_state.briefing_md = ""
 
-# aqui eu guardo os bytes do PDF, quando eu busco o relatório em PDF no backend
+# aqui guardo os bytes do PDF para permitir o download direto pela interface.
 if "briefing_pdf" not in st.session_state:
     st.session_state.briefing_pdf = None
 
 
 # -----------------------------------------------------------------------------
-# Configuração básicona da página
+# Configuração visual da página
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Assistente de Levantamento de Requisitos",
@@ -160,15 +161,16 @@ st.markdown(
 st.title("Assistente de Levantamento de Requisitos")
 
 
-# um subtítulo rápido explicando que é um chat simples de entrevista
+# Subtítulo curto para deixar claro ao usuário qual é o objetivo da tela.
 st.subheader("Como funciona essa tela")
 st.write("Você responde às perguntas na aba **Entrevista** e, quando terminar, gera o relatório na barra lateral "
     "e visualiza/baixa a ATA na aba **Relatório / ATA**.")
 st.divider()
 
 # -----------------------------------------------------------------------------
-# Config do backend (ENV > autodetect)
-# Aqui eu tento descobrir automaticamente qual URL do backend eu vou acabar usando.
+# Configuração da URL do backend.
+# Primeiro tento usar a variável de ambiente BACKEND_URL.
+# Se ela não existir, tento detectar automaticamente uma API rodando localmente.
 # -----------------------------------------------------------------------------
 DEFAULT_BACKEND = os.getenv("BACKEND_URL")  # se vier do script/ENV, usamos
 CANDIDATES = [DEFAULT_BACKEND, "http://127.0.0.1:8010", "http://127.0.0.1:8000"]
@@ -185,13 +187,13 @@ def detect_backend() -> str:
             if r.ok:
                 return url
         except Exception:
-            # se der erro nessa URL, eu só ignoro e tento a próxima
+            # Se essa URL não responder, ignoro o erro e tento a próxima opção.
             continue
-    # fallback final se nada respondeu
+    # Se nenhuma URL responder, uso uma opção padrão para o usuário ajustar manualmente.
     return "http://127.0.0.1:8000"
 
 
-# guardo a URL do backend na sessão
+# Guardo a URL escolhida na sessão para reutilizar nas próximas chamadas.
 if "backend_url" not in st.session_state:
     st.session_state.backend_url = detect_backend()
 
@@ -199,8 +201,9 @@ backend_url = st.session_state.backend_url
 
 
 # -----------------------------------------------------------------------------
-# Sidebar
-# Aqui eu deixo tudo que é configuração, diagnóstico e geração de relatório, só para deixar organizadin.
+# Barra lateral da aplicação.
+# Deixo aqui as configurações, testes de conexão e geração da ATA,
+# para o fluxo principal da entrevista ficar mais limpo.
 # -----------------------------------------------------------------------------
 st.sidebar.title("Configurações")
 
@@ -208,7 +211,7 @@ st.sidebar.markdown("**Backend URL (detectado)**")
 st.sidebar.code(backend_url)
 
 if st.sidebar.button("Redetectar /health"):
-    # aqui eu to tentando detectar de novo o backend chamando /health
+    # Testo novamente o backend chamando o endpoint /health.
     st.session_state.backend_url = detect_backend()
     backend_url = st.session_state.backend_url
     st.success(f"Detectado: {backend_url}")
@@ -228,7 +231,7 @@ if st.sidebar.button("Testar /health"):
     except Exception as e:
         st.sidebar.error(f"Erro: {e}")
 
-# --- Gerar ATA / Briefing ---
+# Área responsável por gerar a ATA da entrevista.
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Relatório da entrevista (ATA)")
 
@@ -239,6 +242,7 @@ if st.sidebar.button("Gerar relatório desta sessão"):
     """
     try:
         # 1) gera/atualiza ATA em Markdown
+        # Primeiro peço ao backend para gerar ou atualizar a ATA em Markdown.
         r = requests.post(
             f"{backend_url}/briefing",
             json={"session_id": st.session_state.session_id},
@@ -248,7 +252,7 @@ if st.sidebar.button("Gerar relatório desta sessão"):
         data = r.json()
         st.session_state.briefing_md = data.get("markdown", "")
 
-        # 2) já nos busca o PDF correspondente
+        # 2) Depois busco a versão em PDF da mesma sessão.
         r_pdf = requests.get(
             f"{backend_url}/briefing/pdf/{st.session_state.session_id}",
             timeout=20,
